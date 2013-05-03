@@ -1,6 +1,8 @@
 __author__ = 'wynand'
 
+from nose.tools import raises
 import hierarchy
+import multimethod
 
 
 def test_basic():
@@ -18,7 +20,7 @@ def test_basic():
          'title': 'A nice window'}
     ]
 
-    gui = hierarchy.Hierarchy('widget')
+    gui = hierarchy.Hierarchy()
     gui.derive('button', 'widget')
     gui.derive('toggle_button', 'button')
     gui.derive('window', 'widget')
@@ -56,8 +58,9 @@ def test_basic():
     embed(widgets[2], widgets[-1], side='L')
     embed(widgets[-1], widgets[0])
 
-def test_disambiguation():
-    shapes = hierarchy.Hierarchy('shape')
+
+def make_disambiguation_method():
+    shapes = hierarchy.Hierarchy()
     shapes.derive('rect', 'shape')
     shapes.derive('square', 'rect')
 
@@ -73,8 +76,58 @@ def test_disambiguation():
     def bar(a, b):
         return 'shape-rect'
 
-    #print bar('rect', 'rect')
+    return bar
 
+
+@raises(multimethod.ArgumentConflict)
+def test_ambiguous():
+    bar = make_disambiguation_method()
+    print bar('rect', 'rect')
+
+
+def test_disambiguation():
+    bar = make_disambiguation_method()
     bar.prefer_method(['rect', 'shape'], ['shape', 'rect'])
-    # print bar('rect', 'rect')
+    print bar('rect', 'rect')
     print bar('square', 'rect')
+    print bar('rect', 'square')
+    print bar('square', 'square')
+
+
+def test_add_new_base():
+    h = hierarchy.Hierarchy()
+    h.derive({
+        'mammal': {
+            'primate': {
+                'human': None,
+                'bonobo': None
+            },
+            'rodent': {
+                'rat': None,
+                'mouse': None
+            }
+        },
+        'cephalopod': {
+            'cuttlefish': None,
+            'octopus': None,
+        }
+    })
+
+    @h.multimethod(lambda x: x)
+    def swim(obj):
+        return "glup glup glup"
+
+    h.derive('mammal', 'animal')
+    h.derive('cephalopod', 'animal')
+
+    @swim.add_method('animal')
+    def swim(obj):
+        return "{0} is swimming".format(obj)
+
+    assert swim('human') == 'human is swimming'
+    assert swim('bonobo') == 'bonobo is swimming'
+    assert swim('rat') == 'rat is swimming'
+    assert swim('mouse') == 'mouse is swimming'
+    assert swim('cuttlefish') == 'cuttlefish is swimming'
+    assert swim('octopus') == 'octopus is swimming'
+

@@ -23,7 +23,7 @@ class PreferenceConflict(Exception):
 
 
 class MultiMethod(object):
-    def __init__(self, name, dispatch_func, default_dispatch_val=DefaultDispatchValue, hierarchy=None):
+    def __init__(self, name, dispatch_func, default_dispatch_val=DefaultDispatchValue, hierarchy=None, default_func=None):
         self.rw = rwlock.ReadWriteLock()
         self.name = name
 
@@ -35,6 +35,9 @@ class MultiMethod(object):
 
         self.method_table = versioneddict.VersionedOrderedDict()
         self.prefer_table = versioneddict.VersionedOrderedDict()
+
+        if default_func is not None:
+            self.method_table[default_dispatch_val] = default_func
 
         self.method_cache = {}
 
